@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 
 const props = defineProps({ id: String });
+console.log('id:', props.id);
 const router = useRouter();
 const products = useProductsStore();
 
@@ -33,12 +34,12 @@ function save() {
         <form @submit.prevent="save">
             <label>
                 Nombre
-                <input v-model="form.value.nombre" type="text" required />
+                <input v-model="form.nombre" type="text" required />
             </label>
 
             <label>
                 Precio
-                <input v-model="form.value.precio" type="number" min="0" step="0.01" required />
+                <input v-model="form.precio" type="number" min="0" step="0.01" required />
             </label>
 
             <div class="actions">

@@ -17,8 +17,9 @@ const router = createRouter({
     },
     {
       path: '/productos/:id',
-      name: 'productos-editar',
+      name: 'producto-editar',
       component: () => import('@/views/ProductoFormView.vue'),
+      props: true,
     },
     {
       path: '/carrito',

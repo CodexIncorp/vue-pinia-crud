@@ -35,9 +35,9 @@ export const useProductsStore = defineStore('products', () => {
 
     function remove(id) {
         items.value = items.value.filter((p) => p.id !== id)
-        useCartStore.remove(id) //coherencia: si se borral producto, sale del carrito
+        useCartStore().remove(id) //coherencia: si se borral producto, sale del carrito
     }
 
     watch(items, (v) => localStorage.setItem(KEY, JSON.stringify(v)), { deep: true })
-    return { items, getById, add, update }
+    return { items, getById, add, update, remove }
 });
