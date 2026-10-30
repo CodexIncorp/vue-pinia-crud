@@ -1,11 +1,23 @@
-<script setup></script>
+<script setup>
+import { RouterLink, RouterView } from 'vue-router'
+import { useCartStore } from '@/stores/cart'
+
+const cart = useCartStore();
+</script>
 
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
-</template>
+  <header class="nav">
+    <nav>
+      <RouterLink to="/">Inicio</RouterLink>
+      <RouterLink to="/productos">Productos</RouterLink>
+      <RouterLink to="/carrito">
+        Carrito
+        <span v-show="cart.count > 0" class="badge">{{ cart.count }}</span>
+      </RouterLink>
+    </nav>
+  </header>
 
-<style scoped></style>
+  <main class="container">
+    <RouterView />
+  </main>
+</template>
