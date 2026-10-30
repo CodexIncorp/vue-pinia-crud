@@ -1,8 +1,33 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
+import HomeView from '@/views/HomeView.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [],
+  history: createWebHashHistory(import.meta.env.BASE_URL),
+  routes: [
+    { path: '/', name: 'inicio', component: HomeView },
+    {
+      path: '/productos',
+      name: 'productos',
+      component: () => import('@/views/ProductosView.vue'),
+    },
+    {
+      path: '/productos/crear',
+      name: 'producto-crear',
+      component: () => import('@/views/ProductoFormView.vue'),
+    },
+    {
+      path: '/productos/:id',
+      name: 'producto-editar',
+      component: () => import('@/views/ProductoFormView.vue'),
+      props: true,
+    },
+    {
+      path: '/carrito',
+      name: 'carrito',
+      component: () => import('@/views/CarritoView.vue'),
+    },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+  ],
 })
 
 export default router
