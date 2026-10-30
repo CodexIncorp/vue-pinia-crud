@@ -2,7 +2,6 @@
 import { useProductsStore } from '@/stores/products'
 import { useCartStore } from '@/stores/cart'
 import { formatPrice } from '@/utils/format'
-import { add } from 'firebase/firestore/pipelines';
 
 const products = useProductsStore();
 const cart = useCartStore();
