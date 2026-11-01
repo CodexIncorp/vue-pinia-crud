@@ -1,10 +1,14 @@
+<script setup>
+import { useRoute } from 'vue-router'
+const route = useRoute()
+</script>
+
 <template>
     <section>
-        <h1>Bienvenido</h1>
-        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Nisi, impedit doloribus, ipsam recusandae corporis
-            omnis iste a voluptatibus ducimus, ut placeat! Voluptatibus, unde totam aspernatur animi nobis accusamus id
-            at?
+        <p v-if="route.query.acceso === 'denegado'" class="error" role="alert">
+            Esa sección es solo para administradores.
         </p>
-        <RouterLink class="btn" to="/productos">Ver productos</RouterLink>
+        <h1>Bienvenido a Pizza Tlaloc</h1>
+        <!-- resto del contenido -->
     </section>
 </template>

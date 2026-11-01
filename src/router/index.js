@@ -27,23 +27,23 @@ const router = createRouter({
       meta: ADMIN,
     },
     {
-      path: '/admin/configuraciones', 
-      name: 'configuraciones', 
+      path: '/admin/configuraciones',
+      name: 'configuraciones',
       component: () => import('@/views/admin/ConfiguracionesView.vue'),
       meta: ADMIN,
     },
     {
-      path: '/admin/configuraciones/crear', 
-      name: 'configuracion-crear', 
+      path: '/admin/configuraciones/crear',
+      name: 'configuracion-crear',
       component: () => import('@/views/admin/ConfiguracionFormView.vue'),
       meta: ADMIN,
     },
     {
-      path: '/admin/configuraciones/:id', 
-      name: 'configuracion-editar', 
+      path: '/admin/configuraciones/:id',
+      name: 'configuracion-editar',
       component: () => import('@/views/admin/ConfiguracionFormView.vue'),
       props: true,
-      meta: ADMIN, 
+      meta: ADMIN,
     },
     {
       path: '/carrito',
@@ -52,6 +52,16 @@ const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
+})
+
+// guard por rol
+import { useSessionStore } from '@/stores/session'
+
+router.beforeEach((to) => {
+  const session = useSessionStore()
+  if (to.meta.requiresAdmin && !session.isAdmin) {
+    return { name: 'inicio', query: { acceso: 'denegado' } }
+  }
 })
 
 export default router

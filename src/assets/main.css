@@ -19,6 +19,17 @@ body {
     border-bottom: 2px solid #42b883;
 }
 
+.nav nav {
+    display: flex;
+    align-items: center;
+}
+
+.nav .rol {
+    margin-left: auto;
+    color: #fff;
+    font-size: .85rem;
+}
+
 .badge {
     background: #42b883;
     border-radius: 999px;
