@@ -1,32 +1,37 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 
+const ADMIN = { requiresAdmin: true }
+
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'inicio', component: HomeView },
     {
-      path: '/productos',
-      name: 'productos',
-      component: () => import('@/views/ProductosView.vue'),
+      path: '/admin/ingredientes',
+      name: 'ingredientes',
+      component: () => import('@/views/admin/IngredientesView.vue'),
+      meta: ADMIN,
     },
     {
-      path: '/productos/crear',
-      name: 'producto-crear',
-      component: () => import('@/views/ProductoFormView.vue'),
+      path: '/admin/ingredientes/crear',
+      name: 'ingrediente-crear',
+      component: () => import('@/views/admin/IngredienteFormView.vue'),
+      meta: ADMIN,
     },
     {
-      path: '/productos/:id',
-      name: 'producto-editar',
-      component: () => import('@/views/ProductoFormView.vue'),
+      path: '/admin/ingredientes/:id',
+      name: 'ingrediente-editar',
+      component: () => import('@/views/admin/IngredienteFormView.vue'),
       props: true,
+      meta: ADMIN,
     },
     {
       path: '/carrito',
       name: 'carrito',
       component: () => import('@/views/CarritoView.vue'),
     },
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    // { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
