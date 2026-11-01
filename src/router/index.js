@@ -2,11 +2,24 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 
 const ADMIN = { requiresAdmin: true }
+const PUBLIC = { public: true, guestOnly: true }
 
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'inicio', component: HomeView },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      meta: PUBLIC,
+    },
+    {
+      path: '/registro',
+      name: 'registro',
+      component: () => import('@/views/RegistroView.vue'),
+      meta: PUBLIC,
+    },
     {
       path: '/admin/ingredientes',
       name: 'ingredientes',
@@ -59,7 +72,15 @@ import { useSessionStore } from '@/stores/session'
 
 router.beforeEach((to) => {
   const session = useSessionStore()
-  if (to.meta.requiresAdmin && !session.isAdmin) {
+  const autenticado = session.validarSesion()
+
+  if (!to.meta.public && !autenticado) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.meta.guestOnly && autenticado) {
+    return { name: 'inicio' }
+  }
+  if (to.meta.requiresAdmin && !session.esAdmin) {
     return { name: 'inicio', query: { acceso: 'denegado' } }
   }
 })

@@ -31,8 +31,8 @@ Construida con **Vue 3 + Vue Router + Pinia** como Single Page Application y pub
 
 ### Acceso
 - **Pantalla de login como primera página**: quien no ha iniciado sesión siempre es dirigido a `/login`.
-- Inicio de sesión simulado con un proveedor de identidad ficticio (**Tlaloc ID**) y cuentas de demostración.
-- El rol (admin o cliente) lo determina la cuenta, no se elige libremente.
+- Inicio de sesión simulado con un proveedor de identidad ficticio (**Tlaloc ID**): correo y contraseña, **creación de cuenta propia** y acceso rápido con cuentas de demostración.
+- Las cuentas nuevas son siempre de rol cliente; el rol (admin o cliente) lo determina la cuenta, no se elige libremente.
 - Cierre de sesión desde el menú.
 
 ### Cliente
@@ -67,64 +67,82 @@ Construida con **Vue 3 + Vue Router + Pinia** como Single Page Application y pub
 
 ## Autenticación (login simulado)
 
-Se imita el flujo de un SSO (por ejemplo "Continuar con Google") sin servidor real.
+Se imita un proveedor de identidad propio, **Tlaloc ID**, sin servidor real. Permite iniciar sesión, **crear una cuenta propia** y entrar con cuentas de demostración.
 
 ### Flujo
 
-1. El usuario abre el sitio. Si no tiene sesión, el router lo redirige a `/login` y conserva el destino original en `?redirect=`.
-2. En `/login` pulsa **Continuar con Tlaloc ID**.
-3. Se muestra un **selector de cuentas** simulado (como el de un proveedor de identidad real).
-4. Al elegir una cuenta, el servicio `mockIdP` responde (de forma asíncrona, con una pequeña espera para simular la red) con el perfil del usuario y un token simulado.
-5. El store `session` guarda al usuario y deriva el rol de la cuenta.
-6. El usuario es enviado al destino original o, si no había, a `/`.
-7. **Cerrar sesión** limpia la sesión y regresa a `/login`.
+1. El usuario abre el sitio. Si no tiene una sesión válida, el router lo redirige a `/login` y conserva el destino original en `?redirect=`.
+2. En `/login` puede:
+   - **Iniciar sesión** con el correo y la contraseña de una cuenta propia.
+   - **Crear una cuenta** en `/registro` (nombre, correo y contraseña). La cuenta nueva inicia sesión automáticamente.
+   - Usar el **acceso rápido de demostración** (cuentas ficticias sin contraseña).
+3. El servicio `mockIdP` valida de forma asíncrona (con una pequeña espera que simula la red) y responde con el perfil y un token simulado.
+4. El store `session` guarda la sesión; el rol sale de la cuenta.
+5. El usuario es enviado al destino original (validado) o, si no había, a `/`.
+6. **Cerrar sesión** borra la sesión y regresa a `/login`.
 
-Si el usuario ya tiene sesión y entra a `/login`, es enviado a inicio.
+Un usuario con sesión que abre `/login` o `/registro` es enviado a inicio. Una sesión expirada o corrupta se descarta en la siguiente navegación.
 
-### Cuentas de demostración
+### Cuentas
 
-| Cuenta | Nombre | Rol |
-|---|---|---|
-| `admin@tlaloc.test` | Admin Tlaloc | admin |
-| `cliente@tlaloc.test` | Cliente Demo | cliente |
+| Tipo | Cuenta | Rol | Cómo entrar |
+|---|---|---|---|
+| Demo | `admin@tlaloc.test` (Admin Tlaloc) | admin | Botón de acceso rápido |
+| Demo | `cliente@tlaloc.test` (Cliente Demo) | cliente | Botón de acceso rápido |
+| Registrada | La que cree cada persona | cliente | Correo y contraseña |
 
-Son cuentas ficticias, **sin contraseña**. Para agregar más cuentas se edita únicamente `src/services/mockIdP.js`.
+- Las cuentas de demostración están definidas en código y no tienen contraseña; no se pueden usar desde el formulario de correo y contraseña.
+- **Nadie puede crear una cuenta admin desde el registro.** El rol lo asigna el servicio, nunca viene del formulario.
+- Reglas de registro: nombre de al menos 2 caracteres, correo válido y único (incluidos los de las cuentas demo), contraseña de al menos 8 caracteres y confirmación idéntica.
+- El error de inicio de sesión es genérico ("Correo o contraseña incorrectos") para no revelar qué correos existen.
 
-### Estructura de la sesión
+### Almacenamiento de contraseñas
+
+Las contraseñas **nunca se guardan en texto plano**: se almacenan como hash PBKDF2-SHA256 con sal aleatoria (Web Crypto API, que requiere `https` o `localhost`). Es una buena práctica de demostración, pero **no hace segura la aplicación**: la "base de datos" y la lógica viven en el navegador. El formulario de registro advierte que no se use una contraseña real.
+
+### Estructuras de datos
 
 ```js
+// Cuenta registrada (tlaloc:users:v1)
+{ id: 'b1c2…', nombre: 'Ana', email: 'ana@correo.com', rol: 'cliente',
+  sal: '9f…', hash: '3a…', creadaEn: 1767225600000 }
+
+// Sesión (tlaloc:session:v1): nunca incluye sal ni hash
 {
-  usuario: { id: 'u1', nombre: 'Admin Tlaloc', email: 'admin@tlaloc.test', rol: 'admin' },
+  usuario: { id: 'b1c2…', nombre: 'Ana', email: 'ana@correo.com', rol: 'cliente' },
   token: 'a8f3…',          // cadena aleatoria sin valor de seguridad
-  expiraEn: 1767225600000  // marca de tiempo; pasada esa hora, la sesión se considera cerrada
+  expiraEn: 1767254400000  // 8 horas después de iniciar sesión
 }
 ```
 
 ### Reglas de protección de rutas
 
-- **Las rutas son privadas por defecto.** Solo las marcadas con `meta: { public: true }` (hoy, únicamente `/login`) se pueden abrir sin sesión. Así, olvidar una marca nunca deja una ruta abierta.
-- Las rutas de administración llevan además `meta: { requiresAdmin: true }`.
+- **Las rutas son privadas por defecto.** Solo las marcadas con `meta: { public: true }` (hoy, `/login` y `/registro`) se pueden abrir sin sesión. Así, olvidar una marca nunca deja una ruta abierta.
+- `/login` y `/registro` llevan además `guestOnly: true`: un usuario con sesión no puede verlas.
+- Las rutas de administración llevan `meta: { requiresAdmin: true }`.
 - Un cliente que intenta abrir una ruta de admin es redirigido a inicio.
+- El destino de `?redirect=` se valida (debe ser una ruta interna) antes de usarse.
 
 ```js
 router.beforeEach((to) => {
   const session = useSessionStore() // dentro del guard, no en el nivel superior
+  const autenticado = session.validarSesion() // descarta sesiones corruptas o expiradas
 
-  if (!to.meta.public && !session.autenticado) {
+  if (!to.meta.public && !autenticado) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'login' && session.autenticado) {
+  if (to.meta.guestOnly && autenticado) {
     return { name: 'inicio' }
   }
   if (to.meta.requiresAdmin && !session.esAdmin) {
-    return { name: 'inicio' }
+    return { name: 'inicio', query: { acceso: 'denegado' } }
   }
 })
 ```
 
 ### Migración a un SSO real
 
-`mockIdP` expone la misma forma que un proveedor real (una función asíncrona que devuelve usuario y token, y otra que cierra sesión).
+`mockIdP` expone la misma forma que un proveedor real: funciones asíncronas para iniciar sesión, registrar y cerrar sesión que devuelven `{ ok, sesion | error }`.
 
 ---
 
@@ -144,6 +162,7 @@ router.beforeEach((to) => {
 | Ruta | Acceso | Descripción |
 |---|---|---|
 | `/login` | Público | Pantalla de inicio de sesión (primera página al acceder) |
+| `/registro` | Público | Creación de cuenta de cliente |
 | `/` | Autenticado | Página de bienvenida |
 | `/pizzas/armar` | Autenticado | Constructor de pizza con vista previa en vivo |
 | `/carrito` | Autenticado | Resumen del pedido, total, quitar ítems y vaciar carrito |
@@ -214,6 +233,7 @@ Tiene la misma forma que una configuración, más `cantidad`. Al agregarla al ca
 | `tlaloc:ingredients:v1` | Ingredientes |
 | `tlaloc:pizzaConfigs:v1` | Configuraciones |
 | `tlaloc:session:v1` | Sesión (usuario, token, expiración) |
+| `tlaloc:users:v1` | Cuentas registradas (con hash de contraseña) |
 | `tlaloc:cart:v1` | Carrito |
 
 ---
@@ -230,15 +250,16 @@ Tiene la misma forma que una configuración, más `cantidad`. Al agregarla al ca
 6. **Las posiciones de los toppings en la vista previa son deterministas** (generador con semilla). Prohibido usar `Math.random()` directo en el render: la pizza se reacomodaría con cada clic.
 7. **Todo cambio entra por Pull Request.** No se hace push directo a `main`.
 8. **La autenticación solo vive en `services/mockIdP.js` y en el store `session`.** Los componentes y el router consultan `session.autenticado`, `session.esAdmin` y `session.usuario`; nunca leen ni escriben la sesión por su cuenta.
-9. **Nada de secretos ni contraseñas reales en el repositorio.** El sitio es estático y público: todo lo que esté en el código lo puede leer cualquiera. Las cuentas de demostración no tienen contraseña.
+9. **Nada de secretos ni contraseñas reales en el repositorio.** El sitio es estático y público: todo lo que esté en el código lo puede leer cualquiera. Las cuentas de demostración no tienen contraseña y las de las cuentas registradas se guardan solo como hash, jamás en texto plano.
 10. **Las acciones de los stores validan y devuelven `{ ok, error }`;** los componentes solo muestran el mensaje.
-11. **Rutas privadas por defecto.** Una ruta pública se declara explícitamente con `meta: { public: true }`.
+11. **Rutas privadas por defecto.** Una ruta pública se declara explícitamente con `meta: { public: true }`; las que solo deben verse sin sesión (login y registro) llevan además `guestOnly: true`.
+12. **Las cuentas creadas desde el registro son siempre de rol cliente.** El rol lo asigna el servicio de identidad, nunca el formulario.
 
 ### Stores
 
 | Store | Responsabilidad |
 |---|---|
-| `session` | Usuario autenticado, token simulado, rol, `autenticado`, `esAdmin`, iniciar y cerrar sesión |
+| `session` | Usuario autenticado, token simulado, rol, `autenticado`, `esAdmin`, `cargando`; acciones `iniciarSesion`, `iniciarSesionDemo`, `registrar`, `cerrarSesion` y `validarSesion` |
 | `ingredients` | CRUD de ingredientes; getters por tipo (`porTipo`, `activosPorTipo`) |
 | `pizzaConfigs` | CRUD de configuraciones; `usosDe(ingredienteId)` |
 | `builder` | Pizza en construcción; getters de precio total y lista de capas |
@@ -279,9 +300,12 @@ src/
 ├── utils/
 │   ├── catalogo.js
 │   ├── persist.js
+│   ├── hash.js
+│   ├── navegacion.js
 │   └── format.js
 └── views/
     ├── LoginView.vue
+    ├── RegistroView.vue
     ├── HomeView.vue
     ├── ArmarPizzaView.vue
     ├── CarritoView.vue
@@ -361,7 +385,8 @@ Ejemplo: `feat: login simulado con Tlaloc ID`.
 ## Limitaciones conocidas
 
 - **Sin backend:** los datos viven en el `localStorage` de cada navegador; no se comparten entre usuarios ni dispositivos.
-- **Login y roles simulados:** no constituyen un mecanismo de seguridad.
+- **Login y roles simulados:** no constituyen un mecanismo de seguridad. Las cuentas y los hashes de contraseña viven en el `localStorage` del navegador: no se comparten entre dispositivos y cualquiera con acceso a ese navegador puede leerlos o modificarlos. No uses contraseñas reales.
+- **Sin recuperación de contraseña ni verificación de correo.**
 - **Un solo carrito por navegador:** el carrito no está ligado al usuario (decisión pendiente, ver abajo).
 - **No hay pagos ni envío real de pedidos:** el pedido termina en la vista de resumen.
 - La vista previa usa formas SVG simples; las ilustraciones definitivas son una mejora pendiente.
@@ -395,6 +420,7 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 | Los toppings son una lista simple de casillas | **Chips o tarjetas** seleccionables con el color del ingrediente y su precio | Media |
 | El color se elige con el selector nativo del navegador | Paleta predefinida con vista previa del ingrediente | Baja |
 | El precio es un input numérico simple | Campo con prefijo `$` y formato de moneda | Baja |
+| Los campos de contraseña del registro son básicos | Botón para mostrar u ocultar la contraseña e indicador de fortaleza | Media |
 
 ### Presentación de datos
 
@@ -453,8 +479,8 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 1. [X] Modelo de datos acordado y stores con datos de muestra
 2. [X] CRUD de ingredientes (admin)
 3. [X] CRUD de configuraciones de pizza (admin)
-4. [ ] **Login simulado (SSO) como primera página** y cierre de sesión
-5. [ ] **Guard de rutas** por sesión y por rol (rutas privadas por defecto)
+4. [X] **Login simulado (Tlaloc ID) como primera página**, registro de cuentas y cierre de sesión
+5. [X] **Guard de rutas** por sesión y por rol (rutas privadas por defecto)
 6. [ ] Constructor del cliente con vista previa en tiempo real
 7. [ ] Carrito adaptado a pizzas personalizadas y resumen del pedido
 8. [ ] Carrito por usuario
@@ -470,6 +496,6 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 
 | Integrante | Responsabilidad |
 |---|---|
-| _Adrik_ | _1, 2, 3, 4, 5, 8_ |
+| _Adrik_ | _1, 2, 3, 4, 5_ |
 | _Alexis_ | _6, 7, 8, 13_ |
 | _Rafa_ | _9, 10, 12_ |
