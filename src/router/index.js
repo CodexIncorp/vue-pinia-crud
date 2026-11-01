@@ -27,11 +27,30 @@ const router = createRouter({
       meta: ADMIN,
     },
     {
+      path: '/admin/configuraciones', 
+      name: 'configuraciones', 
+      component: () => import('@/views/admin/ConfiguracionesView.vue'),
+      meta: ADMIN,
+    },
+    {
+      path: '/admin/configuraciones/crear', 
+      name: 'configuracion-crear', 
+      component: () => import('@/views/admin/ConfiguracionFormView.vue'),
+      meta: ADMIN,
+    },
+    {
+      path: '/admin/configuraciones/:id', 
+      name: 'configuracion-editar', 
+      component: () => import('@/views/admin/ConfiguracionFormView.vue'),
+      props: true,
+      meta: ADMIN, 
+    },
+    {
       path: '/carrito',
       name: 'carrito',
       component: () => import('@/views/CarritoView.vue'),
     },
-    // { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })
 
