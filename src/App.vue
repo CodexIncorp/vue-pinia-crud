@@ -2,6 +2,7 @@
 import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useSessionStore } from '@/stores/session'
+import { MARCA, PRODUCTO } from '@/utils/catalogo'
 
 const cart = useCartStore()
 const session = useSessionStore()
@@ -16,11 +17,11 @@ function salir() {
 <template>
   <header class="nav">
     <nav>
-      <span class="brand">Pizza Tlaloc</span>
+      <span class="brand">{{ MARCA }}</span>
 
       <template v-if="session.autenticado">
         <RouterLink to="/">Inicio</RouterLink>
-        <RouterLink to="/pizzas/armar">Armar pizza</RouterLink>
+        <RouterLink to="/armar">Armar {{ PRODUCTO.singular }}</RouterLink>
         <RouterLink to="/carrito">
           Carrito
           <span v-show="cart.count > 0" class="badge">{{ cart.count }}</span>

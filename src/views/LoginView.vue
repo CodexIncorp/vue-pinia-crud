@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSessionStore } from '@/stores/session'
 import { destinoSeguro } from '@/utils/navegacion'
+import { PRODUCTO } from '@/utils/catalogo'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,7 +35,7 @@ async function entrarDemo(id) {
 <template>
     <section class="auth">
         <h1>Inicia sesión</h1>
-        <p class="hint">Entra con tu cuenta <strong>Tlaloc ID</strong> para armar tu pizza.</p>
+        <p class="hint">Entra con tu cuenta <strong>Tlaloc ID</strong> para armar tu {{ PRODUCTO.singular }}.</p>
 
         <form @submit.prevent="entrar">
             <label>

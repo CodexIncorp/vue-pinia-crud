@@ -1,47 +1,63 @@
 import { defineStore } from 'pinia'
 import { computed } from 'vue'
 import { persistentRef } from '@/utils/persist'
-import { TIPOS } from '@/utils/catalogo'
-import { usePizzaConfigsStore } from './pizzaConfigs'
+import { TIPOS, ATRIBUTOS, tipoPorId } from '@/utils/catalogo'
+import { useRecetasStore } from './recetas'
+
+// Forma completa de un ingrediente: los atributos que su tipo no usa quedan en null
+const BASE = { color: null, orden: null, carnes: null, activo: true }
 
 const SEED = [
-    { id: 't1', nombre: 'Chica', tipo: 'tamano', precio: 80, color: null, activo: true },
-    { id: 't2', nombre: 'Mediana', tipo: 'tamano', precio: 110, color: null, activo: true },
-    { id: 't3', nombre: 'Grande', tipo: 'tamano', precio: 140, color: null, activo: true },
+    { ...BASE, id: 't1', nombre: 'Sencilla', tipo: 'tamano', precio: 60, carnes: 1 },
+    { ...BASE, id: 't2', nombre: 'Doble', tipo: 'tamano', precio: 90, carnes: 2 },
+    { ...BASE, id: 't3', nombre: 'Triple', tipo: 'tamano', precio: 120, carnes: 3 },
 
-    { id: 'm1', nombre: 'Delgada', tipo: 'masa', precio: 0, color: '#e8c27a', activo: true },
-    { id: 'm2', nombre: 'Gruesa', tipo: 'masa', precio: 10, color: '#d9a95b', activo: true },
-    { id: 'm3', nombre: 'Orilla rellena', tipo: 'masa', precio: 25, color: '#e0b36a', activo: true },
+    { ...BASE, id: 'p1', nombre: 'Brioche', tipo: 'pan', precio: 0, color: '#d9a05b' },
+    { ...BASE, id: 'p2', nombre: 'Integral', tipo: 'pan', precio: 5, color: '#a47148' },
+    { ...BASE, id: 'p3', nombre: 'Ajonjolí', tipo: 'pan', precio: 5, color: '#e0b36a' },
+    { ...BASE, id: 'p4', nombre: 'Sin gluten', tipo: 'pan', precio: 15, color: '#cdb891' },
 
-    { id: 's1', nombre: 'Tomate', tipo: 'salsa', precio: 0, color: '#c0392b', activo: true },
-    { id: 's2', nombre: 'Pesto', tipo: 'salsa', precio: 10, color: '#6a8f3a', activo: true },
-    { id: 's3', nombre: 'Blanca', tipo: 'salsa', precio: 10, color: '#f3ead3', activo: true },
+    { ...BASE, id: 'r1', nombre: 'Res', tipo: 'proteina', precio: 0, color: '#6e3b1f' },
+    { ...BASE, id: 'r2', nombre: 'Pollo', tipo: 'proteina', precio: 0, color: '#c98a4b' },
+    { ...BASE, id: 'r3', nombre: 'Vegetariana', tipo: 'proteina', precio: 5, color: '#7a5c3a' },
 
-    { id: 'q1', nombre: 'Mozzarella', tipo: 'queso', precio: 0, color: '#f7e08a', activo: true },
-    { id: 'q2', nombre: 'Oaxaca', tipo: 'queso', precio: 10, color: '#fff3b0', activo: true },
+    { ...BASE, id: 'q1', nombre: 'Cheddar', tipo: 'queso', precio: 0, color: '#f2a900' },
+    { ...BASE, id: 'q2', nombre: 'Oaxaca', tipo: 'queso', precio: 10, color: '#fff3b0' },
+    { ...BASE, id: 'q3', nombre: 'Suizo', tipo: 'queso', precio: 10, color: '#f6ecc4' },
 
-    { id: 'i1', nombre: 'Pepperoni', tipo: 'topping', precio: 15, color: '#a93226', activo: true },
-    { id: 'i2', nombre: 'Jamón', tipo: 'topping', precio: 12, color: '#f1948a', activo: true },
-    { id: 'i3', nombre: 'Champiñones', tipo: 'topping', precio: 10, color: '#d7ccc8', activo: true },
-    { id: 'i4', nombre: 'Albahaca', tipo: 'topping', precio: 5, color: '#27ae60', activo: true },
-    { id: 'i5', nombre: 'Piña', tipo: 'topping', precio: 10, color: '#f4d03f', activo: true },
-    { id: 'i6', nombre: 'Cebolla morada', tipo: 'topping', precio: 8, color: '#8e44ad', activo: true },
-    { id: 'i7', nombre: 'Chorizo', tipo: 'topping', precio: 15, color: '#b03a2e', activo: true },
-    { id: 'i8', nombre: 'Pastor', tipo: 'topping', precio: 18, color: '#d35400', activo: true },
-    { id: 'i9', nombre: 'Aceitunas', tipo: 'topping', precio: 10, color: '#2c3e50', activo: true },
-    { id: 'i10', nombre: 'Jalapeño', tipo: 'topping', precio: 8, color: '#1e8449', activo: true },
+    { ...BASE, id: 's1', nombre: 'Cátsup', tipo: 'salsa', precio: 0, color: '#c0392b' },
+    { ...BASE, id: 's2', nombre: 'Mostaza', tipo: 'salsa', precio: 0, color: '#e1b12c' },
+    { ...BASE, id: 's3', nombre: 'Mayonesa', tipo: 'salsa', precio: 0, color: '#f5efe0' },
+    { ...BASE, id: 's4', nombre: 'Chipotle', tipo: 'salsa', precio: 8, color: '#a04000' },
+    { ...BASE, id: 's5', nombre: 'BBQ', tipo: 'salsa', precio: 8, color: '#6e2c00' },
+
+    // `orden`: menor = más abajo en la pila (justo encima de la carne y el queso)
+    { ...BASE, id: 'e1', nombre: 'Tocino', tipo: 'extra', precio: 15, color: '#b03a2e', orden: 10 },
+    { ...BASE, id: 'e2', nombre: 'Aguacate', tipo: 'extra', precio: 15, color: '#7fa650', orden: 20 },
+    { ...BASE, id: 'e3', nombre: 'Piña', tipo: 'extra', precio: 10, color: '#f4d03f', orden: 30 },
+    { ...BASE, id: 'e4', nombre: 'Jalapeño', tipo: 'extra', precio: 8, color: '#1e8449', orden: 40 },
+    { ...BASE, id: 'e5', nombre: 'Cebolla morada', tipo: 'extra', precio: 5, color: '#8e44ad', orden: 50 },
+    { ...BASE, id: 'e6', nombre: 'Pepinillos', tipo: 'extra', precio: 5, color: '#6b8e23', orden: 60 },
+    { ...BASE, id: 'e7', nombre: 'Jitomate', tipo: 'extra', precio: 5, color: '#d63c2f', orden: 70 },
+    { ...BASE, id: 'e8', nombre: 'Lechuga', tipo: 'extra', precio: 5, color: '#58b947', orden: 80 },
 ];
 
 export const useIngredientsStore = defineStore('ingredients', () => {
-    const items = persistentRef('tlaloc:ingredients:v1', SEED)
+    const items = persistentRef('tlaloc:ingredients:v2', SEED)
+
+    // Los tipos con atributo `orden` se listan de abajo hacia arriba en la pila
+    const ordenar = (tipo, lista) =>
+        tipo.atributos.includes('orden') ? [...lista].sort((a, b) => a.orden - b.orden) : lista
 
     //getters
     const byType = computed(() =>
-        Object.fromEntries(TIPOS.map((t) => [t.id, items.value.filter((i) => i.tipo === t.id)]))
+        Object.fromEntries(
+            TIPOS.map((t) => [t.id, ordenar(t, items.value.filter((i) => i.tipo === t.id))])
+        )
     )
     const activesByType = computed(() =>
         Object.fromEntries(
-            TIPOS.map((t) => [t.id, items.value.filter((i) => i.tipo === t.id && i.activo)])
+            TIPOS.map((t) => [t.id, ordenar(t, items.value.filter((i) => i.tipo === t.id && i.activo))])
         ),
     )
 
@@ -55,7 +71,16 @@ export const useIngredientsStore = defineStore('ingredients', () => {
         if (!nombre) return 'El nombre es obligatorio.'
         const precio = Number(data.precio)
         if (!Number.isFinite(precio) || precio < 0) return 'El precio debe ser un número mayor o igual a cero.'
-        if (!TIPOS.some((t) => t.id === data.tipo)) return 'El tipo de ingrediente no es válido.'
+        const tipo = tipoPorId(data.tipo)
+        if (!tipo) return 'El tipo de ingrediente no es válido.'
+        for (const clave of tipo.atributos) {
+            const attr = ATRIBUTOS[clave]
+            if (attr.input !== 'number') continue
+            const n = Number(data[clave])
+            if (!Number.isInteger(n) || n < attr.min) {
+                return `"${attr.etiqueta}" debe ser un número entero mayor o igual a ${attr.min}.`
+            }
+        }
         const repetido = items.value.some(
             (i) => i.id !== ignoreId && i.tipo === data.tipo && i.nombre.trim().toLowerCase() === nombre.toLowerCase()
         )
@@ -63,13 +88,23 @@ export const useIngredientsStore = defineStore('ingredients', () => {
         return null
     }
 
-    const normalize = (d) => ({
-        nombre: d.nombre.trim(),
-        tipo: d.tipo,
-        precio: Number(d.precio),
-        color: d.tipo === 'tamano' ? null : d.color || '#cccccc',
-        activo: Boolean(d.activo),
-    })
+    // Los atributos que el tipo no usa se guardan en null
+    const normalize = (d) => {
+        const tipo = tipoPorId(d.tipo)
+        const atributos = Object.fromEntries(
+            Object.entries(ATRIBUTOS).map(([clave, attr]) => {
+                if (!tipo.atributos.includes(clave)) return [clave, null]
+                return [clave, attr.input === 'number' ? Number(d[clave]) : d[clave] || attr.defecto]
+            }),
+        )
+        return {
+            nombre: d.nombre.trim(),
+            tipo: d.tipo,
+            precio: Number(d.precio),
+            ...atributos,
+            activo: Boolean(d.activo),
+        }
+    }
 
     //actions
     function add(data) {
@@ -95,7 +130,7 @@ export const useIngredientsStore = defineStore('ingredients', () => {
     }
 
     function remove(id) {
-        const uses = usePizzaConfigsStore().useOf(id)   // el store se obtiene dentro de la función para evitar dependencias circulares
+        const uses = useRecetasStore().useOf(id)   // el store se obtiene dentro de la función para evitar dependencias circulares
         if (uses.length) {
             return {
                 ok: false,

@@ -2,19 +2,25 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useIngredientsStore } from '@/stores/ingredients'
-import { TIPOS } from '@/utils/catalogo'
+import { TIPOS, ATRIBUTOS, tipoPorId } from '@/utils/catalogo'
 
 const props = defineProps({ id: String })
 const router = useRouter()
 const ingredients = useIngredientsStore()
 
 const isEdit = computed(() => !!props.id)
-const form = ref({ nombre: '', tipo: 'topping', precio: 0, color: '#cccccc', activo: true })
+const defectos = Object.fromEntries(Object.entries(ATRIBUTOS).map(([clave, a]) => [clave, a.defecto]))
+const form = ref({ nombre: '', tipo: 'extra', precio: 0, activo: true, ...defectos })
 const error = ref('')
+
+// Atributos que pide el tipo elegido (color, orden, carnes…), tomados de TIPOS
+const atributos = computed(() =>
+    tipoPorId(form.value.tipo).atributos.map((clave) => ({ clave, ...ATRIBUTOS[clave] })),
+)
 
 if (isEdit.value) {
     const exist = ingredients.getById(props.id)
-    if (exist) form.value = { ...exist }
+    if (exist) form.value = { ...defectos, ...exist }
     else router.replace({ name: 'ingredientes' })
 }
 
@@ -52,9 +58,10 @@ function save() {
                 <input v-model.number="form.precio" type="number" min="0" step="0.01" required />
             </label>
 
-            <label v-if="form.tipo !== 'tamano'">
-                Color (para la vista previa)
-                <input v-model="form.color" type="color" />
+            <label v-for="a in atributos" :key="a.clave">
+                {{ a.etiqueta }}<small v-if="a.ayuda"> ({{ a.ayuda }})</small>
+                <input v-if="a.input === 'color'" v-model="form[a.clave]" type="color" />
+                <input v-else v-model.number="form[a.clave]" type="number" :min="a.min" step="1" required />
             </label>
 
             <label class="check">

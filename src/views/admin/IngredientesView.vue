@@ -31,7 +31,11 @@ function eliminar(i) {
             <ul v-else class="list">
                 <li v-for="i in ingredients.byType[t.id]" :key="i.id" :class="{ inactivo: !i.activo }">
                     <span v-if="i.color" class="swatch" :style="{ background: i.color }"></span>
-                    <span class="name">{{ i.nombre }}</span>
+                    <span class="name">
+                        {{ i.nombre }}
+                        <small v-if="i.carnes">· {{ i.carnes }} {{ i.carnes === 1 ? 'carne' : 'carnes' }}</small>
+                        <small v-if="i.orden !== null">· orden {{ i.orden }}</small>
+                    </span>
                     <strong>{{ formatPrice(i.precio) }}</strong>
                     <div class="actions">
                         <button class="btn" @click="ingredients.toggleActive(i.id)">

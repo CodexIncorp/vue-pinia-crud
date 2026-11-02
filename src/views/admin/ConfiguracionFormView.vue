@@ -1,35 +1,29 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePizzaConfigsStore } from '@/stores/pizzaConfigs'
+import { useRecetasStore } from '@/stores/recetas'
 import { useIngredientsStore } from '@/stores/ingredients'
+import { TIPOS, copiarSeleccion } from '@/utils/catalogo'
 
 const props = defineProps({ id: String })
 const router = useRouter()
-const configs = usePizzaConfigsStore()
+const recetas = useRecetasStore()
 const ingredients = useIngredientsStore()
 
 const isEdit = computed(() => !!props.id)
-const form = ref({ nombre: '', tamano: '', masa: '', salsa: null, queso: null, toppings: [] })
+const form = ref({ nombre: '', selecciones: copiarSeleccion() })
 const error = ref('')
 
-const fields = [
-    { clave: 'tamano', etiqueta: 'Tamaño', opcional: false },
-    { clave: 'masa', etiqueta: 'Masa', opcional: false },
-    { clave: 'salsa', etiqueta: 'Salsa', opcional: true },
-    { clave: 'queso', etiqueta: 'Queso', opcional: true },
-]
-
 if (isEdit.value) {
-    const exist = configs.getById(props.id)
-    if (exist) form.value = { ...exist, toppings: [...exist.toppings] }
+    const exist = recetas.getById(props.id)
+    if (exist) form.value = { nombre: exist.nombre, selecciones: copiarSeleccion(exist.selecciones) }
     else router.replace({ name: 'configuraciones' })
 }
 
 function guardar() {
     const res = isEdit.value
-        ? configs.update(props.id, form.value)
-        : configs.add(form.value)
+        ? recetas.update(props.id, form.value)
+        : recetas.add(form.value)
     if (!res.ok) {
         error.value = res.error
         return
@@ -48,24 +42,27 @@ function guardar() {
                 <input v-model="form.nombre" type="text" required />
             </label>
 
-            <label v-for="c in fields" :key="c.clave">
-                {{ c.etiqueta }}
-                <select v-model="form[c.clave]" :required="!c.opcional">
-                    <option v-if="c.opcional" :value="null">Sin {{ c.etiqueta.toLowerCase() }}</option>
-                    <option v-else disabled value="">Elige…</option>
-                    <option v-for="i in ingredients.byType[c.clave]" :key="i.id" :value="i.id">
+            <!-- Un control por tipo del catálogo: casillas si es múltiple, select si no -->
+            <template v-for="t in TIPOS" :key="t.id">
+                <fieldset v-if="t.multiple">
+                    <legend>{{ t.plural }}</legend>
+                    <label v-for="i in ingredients.byType[t.id]" :key="i.id" class="check">
+                        <input v-model="form.selecciones[t.id]" type="checkbox" :value="i.id" />
                         {{ i.nombre }}{{ i.activo ? '' : ' (inactivo)' }}
-                    </option>
-                </select>
-            </label>
+                    </label>
+                </fieldset>
 
-            <fieldset>
-                <legend>Toppings</legend>
-                <label v-for="t in ingredients.byType.topping" :key="t.id" class="check">
-                    <input v-model="form.toppings" type="checkbox" :value="t.id" />
-                    {{ t.nombre }}{{ t.activo ? '' : ' (inactivo)' }}
+                <label v-else>
+                    {{ t.singular }}
+                    <select v-model="form.selecciones[t.id]" :required="t.obligatorio">
+                        <option v-if="!t.obligatorio" :value="null">Sin {{ t.singular.toLowerCase() }}</option>
+                        <option v-else disabled value="">Elige…</option>
+                        <option v-for="i in ingredients.byType[t.id]" :key="i.id" :value="i.id">
+                            {{ i.nombre }}{{ i.activo ? '' : ' (inactivo)' }}
+                        </option>
+                    </select>
                 </label>
-            </fieldset>
+            </template>
 
             <p v-if="error" class="error" role="alert">{{ error }}</p>
 

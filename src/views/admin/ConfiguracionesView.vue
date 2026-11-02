@@ -1,37 +1,44 @@
 <script setup>
-import { usePizzaConfigsStore } from '@/stores/pizzaConfigs'
+import { useRecetasStore } from '@/stores/recetas'
 import { useIngredientsStore } from '@/stores/ingredients'
+import { TIPOS, PRODUCTO } from '@/utils/catalogo'
 
-const configs = usePizzaConfigsStore()
+const recetas = useRecetasStore()
 const ingredients = useIngredientsStore()
 
 // Solo presentación: resuelve un id a su nombre
 const nombre = (id) => ingredients.getById(id)?.nombre ?? '(eliminado)'
 
+// Una línea por tipo con lo que eligió la configuración (omite los tipos vacíos)
+function lineas(c) {
+    return TIPOS.map((t) => {
+        const sel = c.selecciones[t.id]
+        const ids = t.multiple ? sel : sel ? [sel] : []
+        return { id: t.id, etiqueta: ids.length > 1 ? t.plural : t.singular, valor: ids.map(nombre).join(', ') }
+    }).filter((l) => l.valor)
+}
+
 function eliminar(c) {
-    if (confirm(`¿Eliminar la configuración "${c.nombre}"?`)) configs.remove(c.id)
+    if (confirm(`¿Eliminar la configuración "${c.nombre}"?`)) recetas.remove(c.id)
 }
 </script>
 
 <template>
     <section>
         <div class="bar">
-            <h1>Configuraciones de pizza</h1>
+            <h1>Configuraciones de {{ PRODUCTO.singular }}</h1>
             <RouterLink class="btn primary" :to="{ name: 'configuracion-crear' }">Nueva configuración</RouterLink>
         </div>
 
-        <p v-if="configs.items.length === 0">No hay configuraciones registradas.</p>
+        <p v-if="recetas.items.length === 0">No hay configuraciones registradas.</p>
 
         <ul v-else class="list">
-            <li v-for="c in configs.items" :key="c.id">
+            <li v-for="c in recetas.items" :key="c.id">
                 <div class="name">
                     <strong>{{ c.nombre }}</strong>
-                    <div>
-                        {{ nombre(c.tamano) }} · {{ nombre(c.masa) }}
-                        <template v-if="c.salsa"> · Salsa {{ nombre(c.salsa).toLowerCase() }}</template>
-                        <template v-if="c.queso"> · {{ nombre(c.queso) }}</template>
+                    <div v-for="l in lineas(c)" :key="l.id">
+                        <small>{{ l.etiqueta }}: {{ l.valor }}</small>
                     </div>
-                    <small v-if="c.toppings.length">{{ c.toppings.map(nombre).join(', ') }}</small>
                 </div>
                 <div class="actions">
                     <RouterLink class="btn" :to="{ name: 'configuracion-editar', params: { id: c.id } }">Editar
