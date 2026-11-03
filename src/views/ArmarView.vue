@@ -84,7 +84,7 @@ function confirmarArmado() {
                   v-model="builder.selecciones[t.id]"
                   type="checkbox"
                   :value="i.id"
-                  @change="builder.recetaActivaId = null"
+                  @change="builder.personalizar()"
                 />
                 <span v-if="i.color" class="dot" :style="{ background: i.color }"></span>
                 <span class="ing-info">
@@ -103,7 +103,7 @@ function confirmarArmado() {
             <select
               v-model="builder.selecciones[t.id]"
               :required="t.obligatorio"
-              @change="builder.recetaActivaId = null"
+              @change="builder.personalizar()"
             >
               <option v-if="!t.obligatorio" :value="null">
                 Sin {{ t.singular.toLowerCase() }} ($0.00)

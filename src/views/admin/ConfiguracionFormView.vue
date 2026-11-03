@@ -3,12 +3,14 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecetasStore } from '@/stores/recetas'
 import { useIngredientsStore } from '@/stores/ingredients'
+import { useBuilderStore } from '@/stores/builder'
 import { TIPOS, copiarSeleccion } from '@/utils/catalogo'
 
 const props = defineProps({ id: String })
 const router = useRouter()
 const recetas = useRecetasStore()
 const ingredients = useIngredientsStore()
+const builder = useBuilderStore()
 
 const isEdit = computed(() => Boolean(props.id))
 const form = ref({ nombre: '', selecciones: copiarSeleccion() })
@@ -32,43 +34,10 @@ watch(
   { immediate: true }
 )
 
-// Capas para que el admin también previsualice la configuración
-const capasPreview = computed(() => {
-  const s = form.value.selecciones
-  const pan = ingredients.getById(s.pan)
-  const tamano = ingredients.getById(s.tamano)
-  const proteina = ingredients.getById(s.proteina)
-  const queso = s.queso ? ingredients.getById(s.queso) : null
-  const salsas = (s.salsa || []).map((id) => ingredients.getById(id)).filter(Boolean)
-  const extras = (s.extra || [])
-    .map((id) => ingredients.getById(id))
-    .filter(Boolean)
-    .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
-
-  const capas = []
-  const colorPan = pan?.color || '#d9a05b'
-
-  if (pan) capas.push({ uid: 'pan-base', clase: 'pan-base', color: colorPan })
-  salsas.slice(0, Math.ceil(salsas.length / 2)).forEach((sl, i) => {
-    capas.push({ uid: `s-inf-${i}`, clase: 'salsa', color: sl.color || '#c0392b' })
-  })
-  const numCarnes = tamano?.carnes || 1
-  if (proteina) {
-    for (let i = 0; i < numCarnes; i++) {
-      capas.push({ uid: `c-${i}`, clase: 'carne', color: proteina.color || '#6e3b1f' })
-      if (queso) capas.push({ uid: `q-${i}`, clase: 'queso', color: queso.color || '#f2a900' })
-    }
-  }
-  extras.forEach((ex) => {
-    capas.push({ uid: `ex-${ex.id}`, clase: 'extra', color: ex.color || '#58b947' })
-  })
-  salsas.slice(Math.ceil(salsas.length / 2)).forEach((sl, i) => {
-    capas.push({ uid: `s-sup-${i}`, clase: 'salsa', color: sl.color || '#e1b12c' })
-  })
-  if (pan) capas.push({ uid: 'pan-top', clase: 'pan-top', color: colorPan })
-
-  return capas
-})
+// Mismas capas que ve el cliente; el admin ve también los ingredientes inactivos
+const capasPreview = computed(() =>
+  builder.capasDe(form.value.selecciones, { soloActivos: false }),
+)
 
 function guardar() {
   const res = isEdit.value
@@ -127,13 +96,9 @@ function guardar() {
       <aside class="mini-preview">
         <strong>Vista previa de receta</strong>
         <div class="pila">
-          <div
-            v-for="c in capasPreview"
-            :key="c.uid"
-            class="capa"
-            :class="c.clase"
-            :style="{ backgroundColor: c.color }"
-          ></div>
+          <div v-for="c in capasPreview" :key="c.uid" class="capa" :class="c.tipoCapa"
+            :style="{ backgroundColor: c.color }">
+          </div>
         </div>
       </aside>
     </div>
@@ -188,7 +153,7 @@ function guardar() {
   border-radius: 6px 6px 14px 14px;
 }
 
-.carne {
+.proteina {
   width: 150px;
   height: 16px;
   border-radius: 10px;

@@ -45,6 +45,12 @@ export const useBuilderStore = defineStore('builder', () => {
         nombreReceta.value = receta.nombre
     }
 
+    // Se llama cuando el cliente cambia algo a mano: deja de ser la receta cargada
+    function personalizar() {
+        recetaActivaId.value = null
+        nombreReceta.value = ''
+    }
+
     // Ingredientes activos elegidos actualmente
     const elegidos = computed(() => {
         const ingredients = useIngredientsStore()
@@ -68,27 +74,29 @@ export const useBuilderStore = defineStore('builder', () => {
 
     const precioTotal = computed(() => precioUnitario.value * cantidad.value)
 
-    // Capas ordenadas de abajo hacia arriba para el visualizador
-    const capas = computed(() => {
+    // Capas ordenadas de abajo hacia arriba para el visualizador.
+    // Recibe una selección cualquiera: la usan el constructor y el formulario de configuraciones.
+    //   soloActivos: true  → ignora los ingredientes desactivados (cliente)
+    //                false → los muestra (el admin ve la receta completa)
+    function capasDe(s, { soloActivos = true } = {}) {
         const ingredients = useIngredientsStore()
-        const s = selecciones.value
+        const usable = (i) => Boolean(i) && (!soloActivos || i.activo)
+
         const pan = ingredients.getById(s.pan)
         const tamano = ingredients.getById(s.tamano)
         const proteina = ingredients.getById(s.proteina)
         const queso = s.queso ? ingredients.getById(s.queso) : null
-        const salsas = (s.salsa || [])
-            .map((id) => ingredients.getById(id))
-            .filter((i) => i && i.activo)
+        const salsas = (s.salsa || []).map((id) => ingredients.getById(id)).filter(usable)
         const extras = (s.extra || [])
             .map((id) => ingredients.getById(id))
-            .filter((i) => i && i.activo)
+            .filter(usable)
             .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
 
         const listaCapas = []
         const colorPan = pan?.color || '#d9a05b'
 
         // 1. Pan inferior (base)
-        if (pan && pan.activo) {
+        if (usable(pan)) {
             listaCapas.push({
                 uid: `pan-base-${pan.id}`,
                 clase: 'capa-pan-base',
@@ -110,9 +118,9 @@ export const useBuilderStore = defineStore('builder', () => {
             })
         })
 
-        // 3. Carnes y Queso (según el atributo `carnes` del tamaño)
+        // 3. Carnes y queso (según el atributo `carnes` del tamaño)
         const numCarnes = tamano?.carnes || 1
-        if (proteina && proteina.activo) {
+        if (usable(proteina)) {
             for (let i = 0; i < numCarnes; i++) {
                 listaCapas.push({
                     uid: `carne-${proteina.id}-${i}`,
@@ -121,7 +129,7 @@ export const useBuilderStore = defineStore('builder', () => {
                     color: proteina.color || '#6e3b1f',
                     etiqueta: `${proteina.nombre} (${i + 1})`,
                 })
-                if (queso && queso.activo) {
+                if (usable(queso)) {
                     listaCapas.push({
                         uid: `queso-${queso.id}-${i}`,
                         clase: 'capa-queso',
@@ -156,7 +164,7 @@ export const useBuilderStore = defineStore('builder', () => {
         })
 
         // 6. Pan superior (corona)
-        if (pan && pan.activo) {
+        if (usable(pan)) {
             listaCapas.push({
                 uid: `pan-top-${pan.id}`,
                 clase: 'capa-pan-top',
@@ -168,7 +176,10 @@ export const useBuilderStore = defineStore('builder', () => {
         }
 
         return listaCapas
-    })
+    }
+
+    // Capas de la hamburguesa que se está armando
+    const capas = computed(() => capasDe(selecciones.value))
 
     function validate() {
         for (const t of TIPOS) {
@@ -207,8 +218,10 @@ export const useBuilderStore = defineStore('builder', () => {
         precioUnitario,
         precioTotal,
         capas,
+        capasDe,
         iniciarPorDefecto,
         cargarConfiguracion,
         agregarAlCarrito,
+        personalizar,
     }
 })
