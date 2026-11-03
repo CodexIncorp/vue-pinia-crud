@@ -39,7 +39,6 @@ export async function iniciarSesion(email, password) {
         const hash = await hashPassword(password ?? '', cuenta.sal)
         if (hash === cuenta.hash) return { ok: true, sesion: crearSesion(cuenta) }
     }
-    // Mensaje genérico: no revela si el correo existe
     return fallo('Correo o contraseña incorrectos.')
 }
 
