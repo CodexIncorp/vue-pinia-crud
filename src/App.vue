@@ -3,6 +3,7 @@ import { RouterLink, RouterView, useRouter } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { useSessionStore } from '@/stores/session'
 import { MARCA, PRODUCTO } from '@/utils/catalogo'
+import marcaLogo from '@/assets/logo.svg'
 
 const cart = useCartStore()
 const session = useSessionStore()
@@ -17,7 +18,10 @@ function salir() {
 <template>
   <header class="nav">
     <nav>
-      <span class="brand">{{ MARCA }}</span>
+      <span class="brand">
+        <img :src="marcaLogo" alt="" class="brand-logo" />
+        {{ MARCA }}
+      </span>
 
       <template v-if="session.autenticado">
         <RouterLink to="/">Inicio</RouterLink>
