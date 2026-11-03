@@ -1,9 +1,11 @@
-# Pizza Tlaloc
+# Tlaloc Burger
 
-Aplicación web de una pizzería donde el **cliente arma su pizza ingrediente por ingrediente y la ve construirse en tiempo real**, y el **administrador** gestiona los ingredientes y las configuraciones (recetas) disponibles. El acceso se realiza mediante un **inicio de sesión simulado (SSO)**.
+Aplicación web de una hamburguesería donde el **cliente arma su hamburguesa ingrediente por ingrediente y la ve construirse en tiempo real**, y el **administrador** gestiona los ingredientes y las configuraciones (recetas) disponibles. El acceso se realiza mediante un **inicio de sesión simulado (SSO)**.
 
 Construida con **Vue 3 + Vue Router + Pinia** como Single Page Application y publicada en **GitHub Pages**.
 
+> Nombre de marca provisional: está en una sola constante (`MARCA` en `utils/catalogo.js`). El repositorio y la URL de publicación conservan por ahora el nombre anterior.
+>
 > Sitio publicado: `https://CodexIncorp.github.io/vue-pinia-crud/`
 
 ---
@@ -36,16 +38,16 @@ Construida con **Vue 3 + Vue Router + Pinia** como Single Page Application y pub
 - Cierre de sesión desde el menú.
 
 ### Cliente
-- Constructor de pizzas con formulario compuesto **solo por `select` y `checkbox`** para todo lo relacionado con la personalización (tamaño, masa, salsa, queso y toppings).
-- **Vista previa en tiempo real** (SVG por capas): la pizza se dibuja y se actualiza al instante conforme se eligen ingredientes.
+- Constructor de hamburguesas con formulario compuesto **solo por `select` y `checkbox`** para todo lo relacionado con la personalización (tamaño, pan, proteína, queso, salsas y extras). Los controles se generan a partir de `TIPOS`: `select` para los tipos de selección única y casillas para los múltiples.
+- **Vista previa en tiempo real** (SVG, vista lateral): la hamburguesa es una pila vertical de capas que crece y se actualiza al instante conforme se eligen ingredientes.
 - **Precio en vivo** calculado a partir de la selección.
 - Posibilidad de **precargar una configuración** creada por el administrador y modificarla.
-- Carrito de compras con pizzas personalizadas, cantidades y total acumulado.
+- Carrito de compras con hamburguesas personalizadas, cantidades y total acumulado.
 - Vista de **resumen del pedido**.
 
 ### Administrador
 - CRUD de **ingredientes** (nombre, tipo, precio, color de representación, disponibilidad).
-- CRUD de **configuraciones de pizza** (recetas base como "Margarita" o "Pastor").
+- CRUD de **configuraciones de hamburguesa** (recetas base como "Clásica" o "Mexicana").
 
 ### Generales
 - Navegación SPA con Vue Router.
@@ -58,7 +60,7 @@ Construida con **Vue 3 + Vue Router + Pinia** como Single Page Application y pub
 
 | Rol | Puede hacer |
 |---|---|
-| **Cliente** | Ver el menú, personalizar pizzas, agregarlas al carrito y revisar el pedido. |
+| **Cliente** | Ver el menú, personalizar hamburguesas, agregarlas al carrito y revisar el pedido. |
 | **Admin** | Todo lo anterior, además de crear, editar y eliminar ingredientes y configuraciones. |
 
 > **Los roles y el login son una simulación para la demo.** La sesión se guarda en el navegador (`localStorage`) y el router la usa para proteger las rutas. **No es seguridad real**: el código completo de la aplicación se descarga en el navegador y cualquier persona puede modificar la sesión desde las herramientas del desarrollador. Seguridad real requiere un backend.
@@ -152,7 +154,7 @@ router.beforeEach((to) => {
 - [Vue Router 4](https://router.vuejs.org/) (modo hash)
 - [Pinia](https://pinia.vuejs.org/) (stores con sintaxis *setup*)
 - [Vite](https://vite.dev/)
-- SVG para la visualización de la pizza
+- SVG para la visualización de la hamburguesa
 - GitHub Actions + GitHub Pages para el despliegue
 
 ---
@@ -164,12 +166,12 @@ router.beforeEach((to) => {
 | `/login` | Público | Pantalla de inicio de sesión (primera página al acceder) |
 | `/registro` | Público | Creación de cuenta de cliente |
 | `/` | Autenticado | Página de bienvenida |
-| `/pizzas/armar` | Autenticado | Constructor de pizza con vista previa en vivo |
+| `/armar` | Autenticado | Constructor de hamburguesa con vista previa en vivo |
 | `/carrito` | Autenticado | Resumen del pedido, total, quitar ítems y vaciar carrito |
 | `/admin/ingredientes` | Admin | Lista de ingredientes |
 | `/admin/ingredientes/crear` | Admin | Formulario para crear ingrediente |
 | `/admin/ingredientes/:id` | Admin | Formulario para editar ingrediente |
-| `/admin/configuraciones` | Admin | Lista de configuraciones de pizza |
+| `/admin/configuraciones` | Admin | Lista de configuraciones de hamburguesa |
 | `/admin/configuraciones/crear` | Admin | Formulario para crear configuración |
 | `/admin/configuraciones/:id` | Admin | Formulario para editar configuración |
 
@@ -179,62 +181,93 @@ Se usa `createWebHashHistory` (las URLs se ven como `/#/carrito`) porque GitHub 
 
 ## Modelo de datos
 
+**El esquema vive en `utils/catalogo.js` (`TIPOS`).** Los formularios, las validaciones y los stores se derivan de esa lista: no hay campos de producto escritos a mano en ellos. Cambiar de tema, o agregar un tipo, es editar `TIPOS` y el seed.
+
+```js
+export const TIPOS = [
+  { id: 'tamano',   singular: 'Tamaño',   plural: 'Tamaños',   multiple: false, obligatorio: true,  atributos: ['carnes'] },
+  { id: 'pan',      singular: 'Pan',      plural: 'Panes',     multiple: false, obligatorio: true,  atributos: ['color'] },
+  { id: 'proteina', singular: 'Proteína', plural: 'Proteínas', multiple: false, obligatorio: true,  atributos: ['color'] },
+  { id: 'queso',    singular: 'Queso',    plural: 'Quesos',    multiple: false, obligatorio: false, atributos: ['color'] },
+  { id: 'salsa',    singular: 'Salsa',    plural: 'Salsas',    multiple: true,  obligatorio: false, atributos: ['color'] },
+  { id: 'extra',    singular: 'Extra',    plural: 'Extras',    multiple: true,  obligatorio: false, atributos: ['color', 'orden'] },
+]
+```
+
+| Campo de `TIPOS` | Efecto |
+|---|---|
+| `multiple` | `false` → `select` (un ingrediente) · `true` → casillas (varios) |
+| `obligatorio` | La configuración no se puede guardar sin elegirlo (en tipos múltiples, al menos uno) |
+| `atributos` | Datos extra que lleva el ingrediente de ese tipo (ver abajo) |
+
 **Ingrediente**
 
 ```js
 {
-  id: 'i1',
-  nombre: 'Pepperoni',
-  tipo: 'topping',      // tamano | masa | salsa | queso | topping
-  precio: 15,
-  color: '#c0392b',     // usado por la vista previa (null en los tamaños)
+  id: 'e7',
+  nombre: 'Jitomate',
+  tipo: 'extra',        // tamano | pan | proteina | queso | salsa | extra
+  precio: 5,
+  color: '#d63c2f',     // usado por la vista previa (null si el tipo no lo usa)
+  orden: 70,            // solo extras: posición en la pila, menor = más abajo (null en los demás)
+  carnes: null,         // solo tamaños: número de carnes (1, 2, 3…) (null en los demás)
   activo: true
 }
 ```
 
-Cada `tipo` corresponde a un control del formulario del cliente:
+Los atributos que un tipo no usa se guardan como `null`, de modo que todos los ingredientes tienen la misma forma.
 
-| Tipo | Control | Selección |
-|---|---|---|
-| `tamano` | `select` | Una (obligatoria) |
-| `masa` | `select` | Una (obligatoria) |
-| `salsa` | `select` | Una (opcional, `null` = sin salsa) |
-| `queso` | `select` | Una (opcional, `null` = sin queso) |
-| `topping` | `checkbox` | Varias |
+| Tipo | Control | Selección | Atributos |
+|---|---|---|---|
+| `tamano` | `select` | Una (obligatoria): sencilla, doble, triple | `carnes` |
+| `pan` | `select` | Una (obligatoria) | `color` |
+| `proteina` | `select` | Una (obligatoria): res, pollo, vegetariana | `color` |
+| `queso` | `select` | Una (opcional, `null` = sin queso) | `color` |
+| `salsa` | casillas | Varias (opcionales) | `color` |
+| `extra` | casillas | Varios (opcionales): vegetales y otros | `color`, `orden` |
 
-**Configuración de pizza** (receta del administrador)
+**Configuración de hamburguesa** (receta del administrador)
 
 ```js
 {
   id: 'c1',
-  nombre: 'Margarita',
-  tamano: 't2',
-  masa: 'm1',
-  salsa: 's1',          // o null
-  queso: 'q1',          // o null
-  toppings: ['i4']
+  nombre: 'Clásica',
+  selecciones: {
+    tamano: 't1',            // tipo simple: un id (null si es opcional y no se eligió)
+    pan: 'p1',
+    proteina: 'r1',
+    queso: 'q1',
+    salsa: ['s1', 's2'],     // tipo múltiple: arreglo de ids (puede ir vacío)
+    extra: ['e7', 'e8', 'e6'],
+  },
 }
 ```
 
-**Pizza del cliente / ítem del carrito**
+`copiarSeleccion()` (en `utils/catalogo.js`) crea o copia una selección con esta forma; sirve tanto para el formulario de configuraciones como para el futuro `builder`.
 
-Tiene la misma forma que una configuración, más `cantidad`. Al agregarla al carrito se guarda **una copia** de la selección (para que cambios posteriores del constructor no alteren lo ya agregado).
+**Hamburguesa del cliente / ítem del carrito**
+
+Tiene la misma forma que una configuración (`selecciones`), más `cantidad`. Al agregarla al carrito se guarda **una copia** de la selección (para que cambios posteriores del constructor no alteren lo ya agregado).
 
 **Reglas del modelo**
 
 - El `tipo` de un ingrediente **no se puede cambiar** después de crearlo (rompería las configuraciones que lo usan).
 - Un ingrediente **en uso** por alguna configuración **no se puede eliminar**; se desactiva (`activo: false`) y el constructor del cliente solo ofrece los activos.
 - Los nombres son únicos por categoría (ingredientes) y globalmente (configuraciones).
+- **El orden importa:** la posición de un extra en la pila es una propiedad del ingrediente (`orden`), no de la selección. Los listados de extras salen ordenados de abajo hacia arriba.
+- **Algunos ingredientes se repiten:** el tamaño fija cuántas carnes lleva (`carnes`); la proteína elegida aparece esa cantidad de veces en la pila y el pan genera dos capas (inferior y superior). La selección solo guarda **un** id de proteína y de pan; la repetición la resuelve el `builder`.
 
-**Claves de `localStorage`** (con versión; si el modelo cambia, se sube a `:v2`):
+**Claves de `localStorage`** (con versión; si el modelo cambia, se sube la versión):
 
 | Clave | Contenido |
 |---|---|
-| `tlaloc:ingredients:v1` | Ingredientes |
-| `tlaloc:pizzaConfigs:v1` | Configuraciones |
+| `tlaloc:ingredients:v2` | Ingredientes |
+| `tlaloc:recetas:v2` | Configuraciones |
 | `tlaloc:session:v1` | Sesión (usuario, token, expiración) |
 | `tlaloc:users:v1` | Cuentas registradas (con hash de contraseña) |
 | `tlaloc:cart:v1` | Carrito |
+
+> Las claves `tlaloc:ingredients:v1` y `tlaloc:pizzaConfigs:v1` quedaron obsoletas: la app ya no las lee. Se pueden borrar en DevTools. La sesión y las cuentas siguen en `v1` porque no dependen del producto.
 
 ---
 
@@ -243,31 +276,40 @@ Tiene la misma forma que una configuración, más `cantidad`. Al agregarla al ca
 ### Reglas obligatorias
 
 1. **Toda la lógica de datos vive en los stores de Pinia.** Los componentes solo leen estado, llaman acciones y presentan. Nada de cálculos de precio, filtrados de negocio ni persistencia dentro de componentes.
-2. **Los componentes de visualización son "tontos".** `PizzaPreview` recibe datos por *props* y no modifica estado.
+2. **Los componentes de visualización son "tontos".** `HamburguesaPreview` recibe datos por *props* y no modifica estado.
 3. **Las acciones de un store que necesiten otro store** lo obtienen **dentro de la acción** (`useCartStore().remove(id)`), nunca en el nivel superior del archivo, para evitar dependencias circulares.
-4. **Formulario del cliente:** para la personalización de la pizza solo se permiten `select` y `input type="checkbox"`. Los inputs de texto/número solo son válidos para datos que no son de personalización (por ejemplo, la cantidad).
+4. **Formulario del cliente:** para la personalización de la hamburguesa solo se permiten `select` y `input type="checkbox"`. Los inputs de texto/número solo son válidos para datos que no son de personalización (por ejemplo, la cantidad).
 5. **Persistencia aislada en los stores.** Ningún componente toca `localStorage` directamente (se usa `utils/persist.js`); así, migrar a un backend no obliga a modificar la interfaz.
-6. **Las posiciones de los toppings en la vista previa son deterministas** (generador con semilla). Prohibido usar `Math.random()` directo en el render: la pizza se reacomodaría con cada clic.
+6. **El orden de las capas en la vista previa es determinista:** sale del `orden` de cada ingrediente y de las reglas del `builder`. Prohibido usar `Math.random()` en el render: la pila se reacomodaría con cada clic.
 7. **Todo cambio entra por Pull Request.** No se hace push directo a `main`.
 8. **La autenticación solo vive en `services/mockIdP.js` y en el store `session`.** Los componentes y el router consultan `session.autenticado`, `session.esAdmin` y `session.usuario`; nunca leen ni escriben la sesión por su cuenta.
 9. **Nada de secretos ni contraseñas reales en el repositorio.** El sitio es estático y público: todo lo que esté en el código lo puede leer cualquiera. Las cuentas de demostración no tienen contraseña y las de las cuentas registradas se guardan solo como hash, jamás en texto plano.
 10. **Las acciones de los stores validan y devuelven `{ ok, error }`;** los componentes solo muestran el mensaje.
 11. **Rutas privadas por defecto.** Una ruta pública se declara explícitamente con `meta: { public: true }`; las que solo deben verse sin sesión (login y registro) llevan además `guestOnly: true`.
 12. **Las cuentas creadas desde el registro son siempre de rol cliente.** El rol lo asigna el servicio de identidad, nunca el formulario.
+13. **El esquema del producto sale de `TIPOS`.** Stores, formularios y validaciones recorren `TIPOS`; no se escriben a mano nombres de tipos (`'pan'`, `'extra'`…) salvo en el `builder` y la vista previa, que sí dependen del producto. Los textos de marca y producto salen de `MARCA` y `PRODUCTO`.
 
 ### Stores
 
 | Store | Responsabilidad |
 |---|---|
 | `session` | Usuario autenticado, token simulado, rol, `autenticado`, `esAdmin`, `cargando`; acciones `iniciarSesion`, `iniciarSesionDemo`, `registrar`, `cerrarSesion` y `validarSesion` |
-| `ingredients` | CRUD de ingredientes; getters por tipo (`porTipo`, `activosPorTipo`) |
-| `pizzaConfigs` | CRUD de configuraciones; `usosDe(ingredienteId)` |
-| `builder` | Pizza en construcción; getters de precio total y lista de capas |
+| `ingredients` | CRUD de ingredientes; getters por tipo (`byType`, `activesByType`; los tipos con `orden` salen ordenados) |
+| `recetas` | CRUD de configuraciones; `useOf(ingredienteId)` |
+| `builder` | Hamburguesa en construcción; getters de precio total y pila de capas ordenada |
 | `cart` | Ítems del pedido, total, contador, quitar y vaciar |
 
 ### Vista previa en tiempo real
 
-SVG por capas, de abajo hacia arriba: **masa → salsa → queso → toppings**. El tamaño escala el radio de la masa. Cada capa es un elemento reactivo que Vue agrega, quita o recolorea según el estado del store `builder`.
+Vista **lateral** en SVG: una pila vertical que crece conforme se eligen ingredientes. El `builder` entrega la pila ya ordenada, de abajo hacia arriba:
+
+1. **Pan inferior** (el pan elegido).
+2. **Carnes**: la proteína elegida repetida `carnes` veces (según el tamaño), con el **queso entre ellas** (y sobre la última).
+3. **Extras**, ordenados por su `orden` ascendente.
+4. **Salsas**.
+5. **Pan superior** (mismo pan).
+
+Cada capa es un elemento reactivo que Vue agrega, quita o recolorea según el estado del store `builder`, y puede animarse con `<TransitionGroup>`. Como la pila es determinista, no hay generador de posiciones.
 
 ### Convenciones de código
 
@@ -292,11 +334,9 @@ src/
 ├── stores/
 │   ├── session.js
 │   ├── ingredients.js
-│   ├── pizzaConfigs.js
+│   ├── recetas.js
 │   ├── builder.js
 │   └── cart.js
-├── components/
-│   └── PizzaPreview.vue
 ├── utils/
 │   ├── catalogo.js
 │   ├── persist.js
@@ -307,7 +347,7 @@ src/
     ├── LoginView.vue
     ├── RegistroView.vue
     ├── HomeView.vue
-    ├── ArmarPizzaView.vue
+    ├── ArmarView.vue
     ├── CarritoView.vue
     └── admin/
         ├── IngredientesView.vue
@@ -350,7 +390,7 @@ El sitio se publica automáticamente en GitHub Pages con GitHub Actions al hacer
 
 Requisitos de configuración:
 
-- `base: '/NOMBRE-DEL-REPO/'` en `vite.config.js`.
+- `base: '/vue-pinia-crud/'` en `vite.config.js`.
 - En GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 - `package-lock.json` incluido en el repositorio (el workflow usa `npm ci`).
 
@@ -405,7 +445,7 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 | Situación actual | Mejora propuesta | Prioridad |
 |---|---|---|
 | Los errores se muestran en un párrafo dentro de la página | Sistema de **notificaciones tipo toast** (éxito, error, información) con cierre automático y `aria-live`, gestionado por un store `notifications` | Alta |
-| No hay confirmación al guardar, agregar al carrito o iniciar sesión | Toast de éxito tras cada acción ("Pizza agregada al carrito") | Alta |
+| No hay confirmación al guardar, agregar al carrito o iniciar sesión | Toast de éxito tras cada acción ("Hamburguesa agregada al carrito") | Alta |
 | Se usa `confirm()` nativo del navegador para eliminar | **Modal de confirmación** propio, accesible (foco atrapado, cierre con `Esc`) | Alta |
 | El aviso "solo para administradores" viaja en la URL (`?acceso=denegado`) | Mostrarlo como toast y no depender de la URL | Media |
 | Eliminar del carrito es definitivo | Opción de **"Deshacer"** en el toast | Baja |
@@ -417,7 +457,7 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 | Solo se valida al enviar y el error aparece de forma general | **Validación por campo**, mensaje bajo cada input, con `aria-invalid` y `aria-describedby` | Alta |
 | El botón "Guardar" siempre está activo | Estado **deshabilitado o de carga** mientras se procesa | Media |
 | Inputs con estilos básicos y repetidos | Componentes base reutilizables (`BaseInput`, `BaseSelect`, `BaseCheckbox`) | Media |
-| Los toppings son una lista simple de casillas | **Chips o tarjetas** seleccionables con el color del ingrediente y su precio | Media |
+| Las salsas y los extras son una lista simple de casillas | **Chips o tarjetas** seleccionables con el color del ingrediente y su precio | Media |
 | El color se elige con el selector nativo del navegador | Paleta predefinida con vista previa del ingrediente | Baja |
 | El precio es un input numérico simple | Campo con prefijo `$` y formato de moneda | Baja |
 | Los campos de contraseña del registro son básicos | Botón para mostrar u ocultar la contraseña e indicador de fortaleza | Media |
@@ -428,18 +468,18 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 |---|---|---|
 | Listas planas con texto | **Tarjetas** (clientes) y **tablas responsivas** (admin) | Alta |
 | Sin búsqueda, filtros ni orden | Buscador, filtro por tipo/estado y ordenamiento | Media |
-| Los ingredientes se muestran en una sola página larga | **Pestañas por tipo** (tamaño, masa, salsa, queso, topping) | Media |
+| Los ingredientes se muestran en una sola página larga | **Pestañas por tipo** (tamaño, pan, proteína, queso, salsa, extra) | Media |
 | Los estados vacíos son solo texto | Ilustración y botón de acción ("Crear el primer ingrediente") | Media |
 | No hay estados de carga | **Skeletons** (será necesario al migrar a un backend) | Media |
 | El carrito solo permite quitar un ítem completo | Controles **+ / −** de cantidad por ítem | Media |
-| El resumen del pedido es una lista | Resumen con desglose por pizza (ingredientes y subtotal) | Media |
+| El resumen del pedido es una lista | Resumen con desglose por hamburguesa (ingredientes y subtotal) | Media |
 | Sin paginación | Paginación si el catálogo crece | Baja |
 
 ### Identidad visual
 
 | Situación actual | Mejora propuesta | Prioridad |
 |---|---|---|
-| CSS global único y colores fijos | **Variables CSS** (design tokens) con la paleta y tipografía de Pizza Tlaloc | Alta |
+| CSS global único y colores fijos | **Variables CSS** (design tokens) con la paleta y tipografía de Tlaloc Burger | Alta |
 | Sin logotipo ni identidad | Logotipo, favicon y título de pestaña por ruta | Media |
 | Sin iconografía | Conjunto de iconos consistente (acciones, menú, estados) | Media |
 | Un solo tema | Modo oscuro opcional | Baja |
@@ -453,22 +493,22 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 | Cambios de vista bruscos | Transiciones entre rutas con `<Transition>` | Baja |
 | Sin pistas de ubicación en el área de admin | Migas de pan (*breadcrumbs*) | Baja |
 
-### Vista previa de la pizza (función estrella)
+### Vista previa de la hamburguesa (función estrella)
 
 | Situación actual | Mejora propuesta | Prioridad |
 |---|---|---|
-| Toppings representados con círculos de color | **Ilustraciones SVG/PNG por ingrediente** (rodajas, hojas, aceitunas) | Alta |
-| Los ingredientes aparecen y desaparecen de golpe | Animaciones de entrada y salida con `<TransitionGroup>` | Alta |
-| El cambio de tamaño es instantáneo | Escala animada de la pizza | Media |
-| Solo se ve el dibujo | Resumen textual en vivo junto a la pizza (ingredientes elegidos y desglose del precio) | Media |
-| Distribución aleatoria con semilla fija | Distribución más natural (sin encimarse, con rotación leve) | Baja |
+| Capas representadas con franjas de color | **Ilustraciones SVG/PNG por ingrediente** (lechuga, jitomate, carne, queso derretido) | Alta |
+| Las capas aparecen y desaparecen de golpe | Animaciones de entrada y salida con `<TransitionGroup>` (las capas "caen" sobre la pila) | Alta |
+| El cambio de tamaño es instantáneo | La pila crece o se reduce con animación al cambiar el número de carnes | Media |
+| Solo se ve el dibujo | Resumen textual en vivo junto a la hamburguesa (ingredientes elegidos y desglose del precio) | Media |
+| Capas perfectamente rectas y uniformes | Bordes irregulares y ligera variación para un aspecto más natural | Baja |
 
 ### Accesibilidad y responsividad
 
 | Situación actual | Mejora propuesta | Prioridad |
 |---|---|---|
-| Diseño pensado para escritorio | **Enfoque móvil primero**: en pantallas pequeñas, la pizza y el formulario se apilan | Alta |
-| La pizza (SVG) no tiene descripción | `role="img"` y `aria-label` que describa la pizza actual | Alta |
+| Diseño pensado para escritorio | **Enfoque móvil primero**: en pantallas pequeñas, la hamburguesa y el formulario se apilan | Alta |
+| La hamburguesa (SVG) no tiene descripción | `role="img"` y `aria-label` que describa la hamburguesa actual | Alta |
 | Contraste y foco sin revisar | Revisar contraste de color, **foco visible** y navegación completa con teclado | Alta |
 | Animaciones sin control | Respetar `prefers-reduced-motion` | Media |
 
@@ -478,17 +518,18 @@ La primera versión prioriza que todo funcione. Estas son las mejoras de diseño
 
 1. [X] Modelo de datos acordado y stores con datos de muestra
 2. [X] CRUD de ingredientes (admin)
-3. [X] CRUD de configuraciones de pizza (admin)
+3. [X] CRUD de configuraciones de hamburguesa (admin)
 4. [X] **Login simulado (Tlaloc ID) como primera página**, registro de cuentas y cierre de sesión
 5. [X] **Guard de rutas** por sesión y por rol (rutas privadas por defecto)
-6. [ ] Constructor del cliente con vista previa en tiempo real
-7. [ ] Carrito adaptado a pizzas personalizadas y resumen del pedido
-8. [ ] Carrito por usuario
-9. [ ] Identidad visual de Pizza Tlaloc (paleta, tipografía, logotipo)
+5.1. [X] **Cambio de tema pizza → hamburguesa** y modelo dirigido por `TIPOS` (rama `refactor/modelo-por-tipos`)
+6. [X] Constructor del cliente con vista previa en tiempo real
+7. [X] Carrito adaptado a hamburguesas personalizadas y resumen del pedido
+8. [X] Carrito por usuario
+9. [ ] Identidad visual de Tlaloc Burger (paleta, tipografía, logotipo)
 10. [ ] Sistema de notificaciones (toasts) y modal de confirmación
 11. [ ] Validación por campo y componentes de formulario reutilizables
 12. [ ] Rediseño de listas (tarjetas, tablas, pestañas, filtros)
-13. [ ] Ilustraciones por ingrediente y animaciones con `<TransitionGroup>`
+13. [X] Ilustraciones por ingrediente y animaciones con `<TransitionGroup>`
 
 ---
 
