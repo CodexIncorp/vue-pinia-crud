@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
+import { useSessionStore } from '@/stores/session'
 
 const ADMIN = { requiresAdmin: true }
 const PUBLIC = { public: true, guestOnly: true }
@@ -8,6 +9,11 @@ const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/', name: 'inicio', component: HomeView },
+    {
+      path: '/armar',
+      name: 'armar',
+      component: () => import('@/views/ArmarView.vue'),
+    },
     {
       path: '/login',
       name: 'login',
@@ -68,8 +74,6 @@ const router = createRouter({
 })
 
 // guard por rol
-import { useSessionStore } from '@/stores/session'
-
 router.beforeEach((to) => {
   const session = useSessionStore()
   const autenticado = session.validarSesion()
