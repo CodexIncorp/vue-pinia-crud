@@ -34,7 +34,11 @@ function salir() {
 
         <div class="usuario">
           <span>{{ session.usuario.nombre }} <small>({{ session.rol }})</small></span>
-          <button class="btn" @click="salir">Cerrar sesión</button>
+          
+          <!-- Botón de cerrar sesión usando las clases globales .btn y .danger -->
+          <button class="btn danger" @click="salir" title="Cerrar sesión actual">
+            Cerrar sesión
+          </button>
         </div>
       </template>
     </nav>

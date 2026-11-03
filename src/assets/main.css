@@ -176,3 +176,17 @@ form label.check input {
     width: auto;
     margin: 0;
 }
+
+.btn.logout-btn {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn.logout-btn:hover {
+    background: #dc2626;
+    border-color: #dc2626;
+}
